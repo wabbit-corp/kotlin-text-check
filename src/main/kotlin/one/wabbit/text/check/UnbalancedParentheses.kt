@@ -1,17 +1,27 @@
 package one.wabbit.text.check
 
-
 data class Parentheses(val open: Char, val close: Char)
 
-val List = listOf(
-    Parentheses('(', ')'), Parentheses('[', ']'), Parentheses('{', '}'),
-    Parentheses('<', '>'), Parentheses('«', '»'), Parentheses('„', '“'),
-    Parentheses('‘', '’'), Parentheses('‹', '›'), Parentheses('｟', '｠'),
-    Parentheses('｢', '｣'),
-    // Wide parentheses （）
-    Parentheses('（', '）'), Parentheses('［', '］'), Parentheses('｛', '｝'),
-    Parentheses('〈', '〉'), Parentheses('《', '》'), Parentheses('「', '」'),
-)
+val List =
+    listOf(
+        Parentheses('(', ')'),
+        Parentheses('[', ']'),
+        Parentheses('{', '}'),
+        Parentheses('<', '>'),
+        Parentheses('«', '»'),
+        Parentheses('„', '“'),
+        Parentheses('‘', '’'),
+        Parentheses('‹', '›'),
+        Parentheses('｟', '｠'),
+        Parentheses('｢', '｣'),
+        // Wide parentheses （）
+        Parentheses('（', '）'),
+        Parentheses('［', '］'),
+        Parentheses('｛', '｝'),
+        Parentheses('〈', '〉'),
+        Parentheses('《', '》'),
+        Parentheses('「', '」'),
+    )
 
 val OpenToClose = List.associate { it.open to it.close }
 val CloseToOpen = List.associate { it.close to it.open }
