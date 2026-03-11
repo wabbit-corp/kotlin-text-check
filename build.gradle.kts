@@ -1,27 +1,32 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 repositories {
+    google()
+
     mavenCentral()
 
     maven("https://jitpack.io")
 }
 
-group   = "one.wabbit"
-version = "0.1.0"
+group = "one.wabbit"
+version = "0.2.0"
 
 plugins {
-    kotlin("jvm")
+    id("com.android.kotlin.multiplatform.library")
+
+    kotlin("multiplatform")
+
     id("org.jetbrains.dokka")
     id("org.jetbrains.kotlinx.kover")
-
     id("maven-publish")
 
     id("com.vanniktech.maven.publish")
 }
 
 mavenPublishing {
-    coordinates("one.wabbit", "kotlin-text-check", "0.1.0")
+    coordinates("one.wabbit", "kotlin-text-check", "0.2.0")
     publishToMavenCentral()
     signAllPublications()
     pom {
@@ -51,24 +56,76 @@ mavenPublishing {
     }
 }
 
-dependencies {
-    testImplementation(kotlin("test"))
+val localPublishRequested =
+    gradle.startParameter.taskNames.any { taskName -> "MavenLocal" in taskName }
+
+if (localPublishRequested) {
+    tasks.withType<org.gradle.plugins.signing.Sign>().configureEach {
+        enabled = false
+    }
 }
 
-java {
-    targetCompatibility = JavaVersion.toVersion(21)
-    sourceCompatibility = JavaVersion.toVersion(21)
+kotlin {
+    jvmToolchain(21)
+    compilerOptions {
+        freeCompilerArgs.add("-Xcontext-parameters")
+
+    }
+    applyDefaultHierarchyTemplate()
+
+    jvm {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_21)
+        }
+        testRuns["test"].executionTask.configure {
+            jvmArgs("-ea")
+        }
+    }
+
+    androidLibrary {
+        namespace = "one.wabbit.text.check"
+        compileSdk = 34
+        minSdk = 26
+    }
+
+    iosArm64()
+
+    iosSimulatorArm64()
+
+    macosArm64("hostNative")
+
+    targets.withType(KotlinNativeTarget::class.java).configureEach {
+        binaries.framework {
+            baseName = "TextCheck"
+            isStatic = true
+        }
+    }
+
+    sourceSets {
+        val commonTest by getting {
+            dependencies {
+                implementation("org.jetbrains.kotlin:kotlin-test:2.3.10")
+
+            }
+
+        }
+
+    }
 }
+
+val configuredVersionString = version.toString()
 
 tasks.register("printVersion") {
+    inputs.property("configuredVersion", configuredVersionString)
     doLast {
-        println(project.version.toString())
+        println(inputs.properties["configuredVersion"])
     }
 }
 
 tasks.register("assertReleaseVersion") {
+    inputs.property("configuredVersion", configuredVersionString)
     doLast {
-        val versionString = project.version.toString()
+        val versionString = inputs.properties["configuredVersion"].toString()
         require(!versionString.endsWith("+dev-SNAPSHOT")) {
             "Release publishing requires a non-snapshot version, got $versionString"
         }
@@ -84,8 +141,9 @@ tasks.register("assertReleaseVersion") {
 }
 
 tasks.register("assertSnapshotVersion") {
+    inputs.property("configuredVersion", configuredVersionString)
     doLast {
-        val versionString = project.version.toString()
+        val versionString = inputs.properties["configuredVersion"].toString()
         require(versionString.endsWith("+dev-SNAPSHOT")) {
             "Snapshot publishing requires a +dev-SNAPSHOT version, got $versionString"
         }
@@ -95,50 +153,8 @@ tasks.register("assertSnapshotVersion") {
     }
 }
 
-tasks {
-    withType<Test> {
-        jvmArgs("-ea")
-
-    }
-    withType<JavaCompile> {
-        options.encoding = Charsets.UTF_8.name()
-    }
-    withType<Javadoc> {
-        options.encoding = Charsets.UTF_8.name()
-    }
-
-    withType<KotlinCompile> {
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_21)
-
-            freeCompilerArgs.add("-Xcontext-parameters")
-
-        }
-    }
-
-    jar {
-        setProperty("zip64", true)
-
-    }
-}
-
-// Kover Configuration
-kover {
-    // useJacoco() // This is the default, can be specified if you want to be explicit
-    // reports {
-    //     // Configure reports for the default test task.
-    //     // Kover tries to infer the variant for simple JVM projects.
-    //     // If you have specific build types/flavors, you'd configure them here as variants.
-    //     variant() { // Or remove "debug" for a default JVM setup unless you have variants
-    //         html {
-    //             // reportDir.set(layout.buildDirectory.dir("reports/kover/html")) // Uncomment to customize output
-    //             // title.set("kotlin-text-check Code Coverage") // Uncomment to customize title
-    //         }
-    //         xml {
-    //             // reportFile.set(layout.buildDirectory.file("reports/kover/coverage.xml")) // Uncomment to customize output
-    //         }
-    //     }
-    // }
+tasks.withType<Test>().configureEach {
+    jvmArgs("-ea")
 }
 
 dokka {
@@ -147,19 +163,24 @@ dokka {
         suppressInheritedMembers.set(true)
         failOnWarning.set(true)
     }
-    dokkaSourceSets.main {
-        // includes.from("README.md")
+
+    dokkaSourceSets.configureEach {
+        if (name == "commonMain") {
+            val dokkaModuleFile = file("docs/dokka-module.md")
+            if (dokkaModuleFile.exists()) {
+                includes.from(dokkaModuleFile)
+            }
+        }
 
         sourceLink {
-            localDirectory.set(file("src/main/kotlin"))
-            remoteUrl("https://github.com/wabbit-corp/kotlin-text-check/tree/master/src/main/kotlin")
+            localDirectory.set(file("src"))
+            remoteUrl("https://github.com/wabbit-corp/kotlin-text-check/tree/master/src")
             remoteLineSuffix.set("#L")
         }
 
     }
+
     pluginsConfiguration.html {
-        // customStyleSheets.from("styles.css")
-        // customAssets.from("logo.png")
         footerMessage.set("(c) Wabbit Consulting Corporation")
     }
 }
