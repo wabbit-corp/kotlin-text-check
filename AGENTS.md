@@ -10,5 +10,6 @@ Add repo-specific instructions above or below the managed facts block. Keep manu
 - Canonical repo target: `kotlin-text-check`. Useful entrypoints: `dev project show kotlin-text-check`, `dev build kotlin-text-check`, `dev check kotlin-text-check`.
 - Setup-managed files are regenerated with `dev setup kotlin-text-check`; avoid hand-editing stamped generated files.
 - Sanctioned override files in this repo: `build.extra.gradle.kts`, `settings.local.gradle.kts`.
+- Review `kotlin-conventions.md` before editing Kotlin code in this repo.
 - Configured project types: `kotlin/kmp`. Docs: `dokka`.
 <!-- END app-wabbit-dev managed facts -->
